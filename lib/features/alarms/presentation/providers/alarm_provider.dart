@@ -26,6 +26,7 @@ class AlarmProvider extends ChangeNotifier {
   List<Alarm> get alarms => List.unmodifiable(_alarms);
   List<TriggerEvent> get triggers => List.unmodifiable(_triggers);
   List<TokenPair> get livePairs => List.unmodifiable(_livePairs);
+  List<TokenOption> get allTokens => TopTokens.getAllTokens(livePairs: _livePairs);
   String get syncStatus => _syncStatus;
   DateTime? get lastSyncTime => _lastSyncTime;
   bool get isLoading => _isLoading;

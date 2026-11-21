@@ -9,6 +9,7 @@ import '../../domain/models/alarm.dart';
 import '../../domain/models/token_pair.dart';
 import '../providers/alarm_provider.dart';
 import '../widgets/live_preview_card.dart';
+import '../widgets/token_picker_modal.dart';
 
 class CreateEditAlarmScreen extends StatefulWidget {
   final Alarm? existingAlarm;
@@ -40,7 +41,18 @@ class _CreateEditAlarmScreenState extends State<CreateEditAlarmScreen> {
   Timer? _liveRefreshTimer;
 
   // Popular tokens for quick selection chips
-  final List<String> _popularSymbols = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'ARB-USD', 'LINK-USD', 'AVAX-USD', 'GMX-USD'];
+  final List<String> _popularSymbols = [
+    'BTC-USD',
+    'ETH-USD',
+    'SOL-USD',
+    'DOGE-USD',
+    'PEPE-USD',
+    'ARB-USD',
+    'LINK-USD',
+    'SUI-USD',
+    'AVAX-USD',
+    'GMX-USD',
+  ];
 
   @override
   void initState() {
@@ -129,6 +141,18 @@ class _CreateEditAlarmScreenState extends State<CreateEditAlarmScreen> {
     _loadLivePreview();
   }
 
+  Future<void> _openTokenPicker() async {
+    final provider = Provider.of<AlarmProvider>(context, listen: false);
+    final selected = await TokenPickerModal.show(
+      context,
+      currentToken: _selectedToken,
+      livePairs: provider.livePairs,
+    );
+    if (selected != null && mounted) {
+      _selectToken(selected);
+    }
+  }
+
   void _saveAlarm() {
     if (!_formKey.currentState!.validate()) return;
 
@@ -188,20 +212,48 @@ class _CreateEditAlarmScreenState extends State<CreateEditAlarmScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Quick Token Selection Chips
-                const Text(
-                  'Quick Token Select',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Quick Token Select',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                    ),
+                    InkWell(
+                      onTap: _openTokenPicker,
+                      child: Text(
+                        'View all (${provider.allTokens.length}) →',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.accentNeonGreen),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 38,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: _popularSymbols.length,
+                    itemCount: _popularSymbols.length + 1,
                     separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (context, index) {
+                      if (index == _popularSymbols.length) {
+                        return ActionChip(
+                          avatar: const Icon(Icons.search_rounded, size: 16, color: AppTheme.accentNeonGreen),
+                          label: Text(
+                            'All Tokens (${provider.allTokens.length})',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppTheme.accentNeonGreen,
+                            ),
+                          ),
+                          backgroundColor: AppTheme.cardDark,
+                          side: const BorderSide(color: AppTheme.accentNeonGreen),
+                          onPressed: _openTokenPicker,
+                        );
+                      }
                       final sym = _popularSymbols[index];
-                      final option = TopTokens.findBySymbolOrId(sym);
+                      final option = TopTokens.findBySymbolOrId(sym, livePairs: provider.livePairs);
                       final isSelected = _selectedToken.symbol == option.symbol;
 
                       return ChoiceChip(
@@ -276,25 +328,64 @@ class _CreateEditAlarmScreenState extends State<CreateEditAlarmScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Token / Market', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Token / Market', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                              InkWell(
+                                onTap: _openTokenPicker,
+                                child: Text(
+                                  'Search (${provider.allTokens.length})',
+                                  style: const TextStyle(fontSize: 11, color: AppTheme.accentNeonGreen, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 6),
-                          DropdownButtonFormField<TokenOption>(
-                            initialValue: _selectedToken,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: AppTheme.cardDark,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.cardBorderDark)),
+                          InkWell(
+                            onTap: _openTokenPicker,
+                            borderRadius: BorderRadius.circular(12),
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: AppTheme.cardDark,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.cardBorderDark)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.cardBorderDark)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                suffixIcon: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.search_rounded, size: 18, color: AppTheme.accentNeonGreen),
+                                    SizedBox(width: 2),
+                                    Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textSecondary),
+                                    SizedBox(width: 6),
+                                  ],
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.accentPurple.withValues(alpha: 0.25),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      _selectedToken.baseCurrency,
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accentNeonGreen),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _selectedToken.symbol,
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            items: TopTokens.list.map((token) {
-                              return DropdownMenuItem(
-                                value: token,
-                                child: Text(token.symbol, overflow: TextOverflow.ellipsis),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) _selectToken(val);
-                            },
                           ),
                         ],
                       ),
